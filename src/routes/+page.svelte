@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import Chart from 'chart.js/auto';
 
 	let users = [];
 	let loading = false;
@@ -9,8 +10,44 @@
 	let lastName = '';
 	let age = '';
 	let editingId = null;
+	let chartCanvas;
+	let chart;
 
 	const USERS_ENDPOINT = '/api/users';
+
+	const renderChart = () => {
+		if (!chartCanvas) return;
+		const labels = users.map((user) => `${user.firstName} ${user.lastName}`.trim());
+		const data = users.map((user) => Number(user.age) || 0);
+
+		if (!chart) {
+			chart = new Chart(chartCanvas, {
+				type: 'bar',
+				data: {
+					labels,
+					datasets: [
+						{
+							label: 'Age',
+							data,
+							backgroundColor: 'rgba(15, 23, 42, 0.6)'
+						}
+					]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { display: false }
+					}
+				}
+			});
+			return;
+		}
+
+		chart.data.labels = labels;
+		chart.data.datasets[0].data = data;
+		chart.update();
+	};
 
 	const loadUsers = async () => {
 		loading = true;
@@ -19,6 +56,7 @@
 			const res = await fetch(USERS_ENDPOINT);
 			if (!res.ok) throw new Error('Failed to load users');
 			users = await res.json();
+			renderChart();
 		} catch (err) {
 			error = err?.message ?? 'Something went wrong';
 		} finally {
@@ -78,7 +116,13 @@
 		}
 	};
 
-	onMount(loadUsers);
+	onMount(() => {
+		loadUsers();
+		return () => {
+			chart?.destroy();
+			chart = null;
+		};
+	});
 </script>
 
 <div class="min-h-screen bg-slate-50 text-slate-900">
@@ -88,38 +132,50 @@
 
 		<div class="mt-6 rounded-lg border bg-white p-4">
 			<h2 class="text-sm font-medium text-slate-700">{editingId ? 'Edit user' : 'Add user'}</h2>
-			<div class="mt-3 grid gap-3 sm:grid-cols-3">
-				<input
-					class="w-full rounded border px-3 py-2 text-sm"
-					placeholder="First name"
-					bind:value={firstName}
-				/>
-				<input
-					class="w-full rounded border px-3 py-2 text-sm"
-					placeholder="Last name"
-					bind:value={lastName}
-				/>
-				<input
-					class="w-full rounded border px-3 py-2 text-sm"
-					placeholder="Age"
-					type="number"
-					min="0"
-					bind:value={age}
-				/>
-			</div>
-			<div class="mt-3 flex gap-2">
-				<button class="rounded cursor-pointer bg-slate-900 px-4 py-2 text-sm text-white" on:click={submitForm}>
-					{editingId ? 'Update' : 'Create'}
-				</button>
-				{#if editingId}
-					<button class="rounded cursor-pointer border px-4 py-2 text-sm" on:click={resetForm}>
-						Cancel
+			<form class="mt-3" on:submit|preventDefault={submitForm}>
+				<div class="grid gap-3 sm:grid-cols-3">
+					<input
+						class="w-full rounded border px-3 py-2 text-sm"
+						placeholder="First name"
+						required
+						bind:value={firstName}
+					/>
+					<input
+						class="w-full rounded border px-3 py-2 text-sm"
+						placeholder="Last name"
+						required
+						bind:value={lastName}
+					/>
+					<input
+						class="w-full rounded border px-3 py-2 text-sm"
+						placeholder="Age"
+						type="number"
+						min="0"
+						required
+						bind:value={age}
+					/>
+				</div>
+				<div class="mt-3 flex gap-2">
+					<button
+						type="submit"
+						class="rounded cursor-pointer bg-slate-900 px-4 py-2 text-sm text-white"
+					>
+						{editingId ? 'Update' : 'Create'}
 					</button>
+					{#if editingId}
+						<button
+							type="button"
+							class="rounded cursor-pointer border px-4 py-2 text-sm"
+							on:click={resetForm}
+						>
+							Cancel
+						</button>
+					{/if}
+				</div>
+				{#if error}
+					<p class="mt-3 text-sm text-red-600">{error}</p>
 				{/if}
-			</div>
-			{#if error}
-				<p class="mt-3 text-sm text-red-600">{error}</p>
-			{/if}
+			</form>
 		</div>
 
 		<div class="mt-6 rounded-lg border bg-white">
@@ -157,6 +213,14 @@
 					{/each}
 				</ul>
 			{/if}
+		</div>
+
+    <h1 class="text-2xl font-semibold pt-6">Data Visualization</h1>
+		<div class="mt-6 rounded-lg border bg-white p-4">
+			<h2 class="text-sm font-medium text-slate-700">Ages chart</h2>
+			<div class="mt-3 h-64">
+				<canvas bind:this={chartCanvas}></canvas>
+			</div>
 		</div>
 	</div>
 </div>
