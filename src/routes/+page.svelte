@@ -6,9 +6,12 @@
 	let loading = false;
 	let error = '';
 
-	let firstName = '';
-	let lastName = '';
-	let age = '';
+	let interviewee = '';
+	let interviewTitle = '';
+	let word = '';
+	let count = '';
+	let category = '';
+	let date = '';
 	let editingId = null;
 	let chartCanvas;
 	let chart;
@@ -16,53 +19,39 @@
 	const USERS_ENDPOINT = '/api/users';
 
 	const renderChart = () => {
-		if (!chartCanvas) return;
-		const labels = users.map((user) => `${user.firstName} ${user.lastName}`.trim());
-		const data = users.map((user) => Number(user.age) || 0);
+	  if (!chartCanvas) return;
+  
+	const sorted = [...users]
+	  .sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0))
+      .slice(0, 10);
 
-		if (!chart) {
-			chart = new Chart(chartCanvas, {
-				type: 'bar',
-				data: {
-					labels,
-					datasets: [
-						{
-							label: 'Age',
-							data,
-							backgroundColor: [
-								'rgb(255, 99, 132)',
-								'rgb(54, 162, 235)',
-								'rgb(255, 205, 86)',
-								'rgb(75, 192, 192)',
-								'rgb(153, 102, 255)',
-								'rgb(255, 159, 64)',
-								'rgb(201, 203, 207)',
-								'rgb(99, 255, 132)'
-							],
-						}
-					]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-            legend: {
-              position: 'top',
-            },
-            title: {
-              display: true,
-              text: 'Users Ages'
-            }
-          }
-				}
-			});
-			return;
-		}
+	const labels = sorted.map((u) => u.word);
+	const data = sorted.map((u) => Number(u.count) || 0);
 
-		chart.data.labels = labels;
-		chart.data.datasets[0].data = data;
-		chart.update();
-	};
+	if (!chart) {
+      chart = new Chart(chartCanvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: 'Top Words (Count)', data }]
+       },
+	   options: {
+		 responsive: true,
+		 maintainAspectRatio: false,
+		 plugins: {
+		   legend: { position: 'top' },
+		   title: { display: true, text: 'Top Words (Count)' }
+		 }
+	   }
+	 });
+  } else {
+	chart.data.labels = labels;
+	chart.data.datasets[0].data = data;
+	chart.update();
+  }
+};
+
+
 
 	const loadUsers = async () => {
 		loading = true;
@@ -150,23 +139,41 @@
 				<div class="grid gap-3 sm:grid-cols-3">
 					<input
 						class="w-full rounded border px-3 py-2 text-sm"
-						placeholder="First name"
+						placeholder="Interviewee"
 						required
-						bind:value={firstName}
+						bind:value={interviewee}
 					/>
 					<input
 						class="w-full rounded border px-3 py-2 text-sm"
-						placeholder="Last name"
+						placeholder="Interview Title"
 						required
-						bind:value={lastName}
+						bind:value={interviewTitle}
 					/>
 					<input
 						class="w-full rounded border px-3 py-2 text-sm"
-						placeholder="Age"
+						placeholder="Word"
+						required
+						bind:value={word}
+					/>
+					<input
+						class="w-full rounded border px-3 py-2 text-sm"
+						placeholder="Count"
+						required
 						type="number"
 						min="0"
+						bind:value={count}
+					/>
+					<input
+						class="w-full rounded border px-3 py-2 text-sm"
+						placeholder="Category"
+						bind:value={category}
+					/>
+					<input
+						class="w-full rounded border px-3 py-2 text-sm"
+						placeholder="Date (YYYY-MM-DD)"
 						required
-						bind:value={age}
+						type="date"
+						bind:value={date}
 					/>
 				</div>
 				<div class="mt-3 flex gap-2">
